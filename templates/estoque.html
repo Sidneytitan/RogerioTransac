@@ -1,10 +1,307 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>ro</title>
-</head>
-<body>
-<p>teste nvo</p>
-</body>
-</html>
+{% extends 'base.html' %}
+
+{% block title %}Controle de Estoque{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <h1>Controle de Estoque</h1>
+
+    <!-- Painel de Informações Resumidas -->
+    <div class="row mt-3 mb-4">
+        <div class="col-md-6">
+            <div class="alert alert-info">
+                <strong>Quantidade Total de Produtos:</strong> {{ quantidade_total }}
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="alert alert-info">
+                <strong>Valor Total do Estoque:</strong> R$ {{ valor_total | round(2) }}
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtro por Filial -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <select class="form-control" id="filtroFilial" onchange="filtrarPorFilial()">
+                <option value="Todas">Todas as Filiais</option>
+                <option value="Barueri">Barueri</option>
+                <option value="Uberlândia">Uberlândia</option>
+                <option value="Senador Canedo">Senador Canedo</option>
+                <option value="Paulínia">Paulínia</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- Botões de Ação -->
+    <div class="mt-4 mb-4">
+        <button type="button" class="btn btn-success" data-toggle="modal" data-target="#modalEntrada">Dar Entrada</button>
+        <button type="button" class="btn btn-danger" data-toggle="modal" data-target="#modalSaida">Dar Saída</button>
+        <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#modalCadastroProduto">Cadastrar Produto</button>
+    </div>
+
+    <!-- Tabela de Estoque Atual -->
+    <table class="table table-striped" id="tabelaEstoque">
+        <thead>
+            <tr>
+                <th>ID do Produto</th>
+                <th>Nome do Produto</th>
+                <th>Tipo</th>
+                <th>Quantidade</th>
+                <th>Filial</th>
+                <th>Ação</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for produto in produtos %}
+            <tr data-filial="{{ produto['filial'] }}">
+                <td>{{ produto['produto_id'] }}</td>
+                <td>{{ produto['produto_nome'] }}</td>
+                <td>{{ produto['produto_tipo'] }}</td>
+                <td>{{ produto['quantidade'] }}</td>
+                <td>{{ produto['filial'] }}</td>
+                <td><a href="{{ url_for('historico', produto_id=produto['produto_id']) }}" class="btn btn-info">Ver Histórico</a></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- Modais de Ações -->
+    <!-- Modal de Entrada -->
+    <div class="modal fade" id="modalEntrada" tabindex="-1" role="dialog" aria-labelledby="modalEntradaLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalEntradaLabel">Dar Entrada</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <form action="{{ url_for('processar_estoque') }}" method="post">
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label for="produto_id">Produto</label>
+                            <select class="form-control" id="produto_id" name="produto_id" required>
+                                <option value="" disabled selected>Selecione um produto</option>
+                                {% for produto in produtos %}
+                                    <option value="{{ produto['produto_id'] }}">{{ produto['produto_nome'] }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="quantidade">Quantidade</label>
+                            <input type="number" class="form-control" id="quantidade" name="quantidade" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="valor_unitario">Valor Unitário</label>
+                            <input type="number" step="0.01" class="form-control" id="valor_unitario" name="valor_unitario">
+                        </div>
+                        <div class="form-group">
+                            <label for="valor_total">Valor Total</label>
+                            <input type="number" step="0.01" class="form-control" id="valor_total" name="valor_total" readonly>
+                        </div>
+                        <div class="form-group">
+                            <label for="filial">Filial</label>
+                            <select class="form-control" id="filial" name="filial">
+                                <option value="Barueri">Barueri</option>
+                                <option value="Uberlândia">Uberlândia</option>
+                                <option value="Senador Canedo">Senador Canedo</option>
+                                <option value="Paulínia">Paulínia</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="quem_lancando">Quem está lançando</label>
+                            <select class="form-control" id="quem_lancando" name="quem_lancando" required>
+                                <option value="" disabled selected>Selecione</option>
+                                <option value="Sidney Ribeiro">Sidney Ribeiro</option>
+                                <option value="Leo teste">Leo teste</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="observacoes">Observações</label>
+                            <textarea class="form-control" id="observacoes" name="observacoes"></textarea>
+                        </div>
+                        <input type="hidden" name="acao" value="entrada">
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Fechar</button>
+                        <button type="submit" class="btn btn-success">Salvar Entrada</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Saída -->
+    <div class="modal fade" id="modalSaida" tabindex="-1" role="dialog" aria-labelledby="modalSaidaLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalSaidaLabel">Dar Saída</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <form action="{{ url_for('processar_estoque') }}" method="post">
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label for="produto_saida">Produto</label>
+                            <select class="form-control" id="produto_saida" name="produto_id" onchange="buscarValorUnitario()" required>
+                                <option value="" disabled selected>Selecione um produto</option>
+                                {% for produto in produtos %}
+                                    <option value="{{ produto['produto_id'] }}">{{ produto['produto_nome'] }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="quantidade_saida">Quantidade</label>
+                            <input type="number" class="form-control" id="quantidade_saida" name="quantidade" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="valor_unitario_saida">Valor Unitário</label>
+                            <input type="number" step="0.01" class="form-control" id="valor_unitario_saida" name="valor_unitario" readonly>
+                        </div>
+                        <div class="form-group">
+                            <label for="valor_total_saida">Valor Total</label>
+                            <input type="number" step="0.01" class="form-control" id="valor_total_saida" name="valor_total" readonly>
+                        </div>
+                        <div class="form-group">
+                            <label for="filial_saida">Filial</label>
+                            <select class="form-control" id="filial_saida" name="filial">
+                                <option value="Barueri">Barueri</option>
+                                <option value="Uberlândia">Uberlândia</option>
+                                <option value="Senador Canedo">Senador Canedo</option>
+                                <option value="Paulínia">Paulínia</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="quem_lancando_saida">Quem está lançando</label>
+                            <select class="form-control" id="quem_lancando_saida" name="quem_lancando" required>
+                                <option value="" disabled selected>Selecione</option>
+                                <option value="Sidney Ribeiro">Sidney Ribeiro</option>
+                                <option value="Leo teste">Leo teste</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="observacoes_saida">Observações</label>
+                            <textarea class="form-control" id="observacoes_saida" name="observacoes"></textarea>
+                        </div>
+                        <input type="hidden" name="acao" value="saida">
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Fechar</button>
+                        <button type="submit" class="btn btn-danger">Salvar Saída</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Cadastro de Produto -->
+    <div class="modal fade" id="modalCadastroProduto" tabindex="-1" role="dialog" aria-labelledby="modalCadastroProdutoLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalCadastroProdutoLabel">Cadastrar Novo Produto</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <form action="{{ url_for('cadastrar_produto') }}" method="post">
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label for="produto_id">ID do Produto</label>
+                            <input type="text" class="form-control" id="produto_id" name="produto_id" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="produto_nome">Nome do Produto</label>
+                            <input type="text" class="form-control" id="produto_nome" name="produto_nome" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="produto_tipo">Tipo do Produto</label>
+                            <select class="form-control" id="produto_tipo" name="produto_tipo" required>
+                                <option value="" disabled selected>Selecione o Tipo</option>
+                                <option value="Peça">Peça</option>
+                                <option value="EPI">EPI</option>
+                                <option value="EPC">EPC</option>
+                                <option value="Uniforme">Uniforme</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Fechar</button>
+                        <button type="submit" class="btn btn-primary">Cadastrar Produto</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Scripts Bootstrap -->
+<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.10.2/dist/umd/popper.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+<script>
+    // Função para calcular o valor total na entrada
+    function calcularValorTotal() {
+        var quantidade = parseFloat(document.getElementById('quantidade').value) || 0;
+        var valorUnitario = parseFloat(document.getElementById('valor_unitario').value) || 0;
+        var valorTotal = quantidade * valorUnitario;
+        document.getElementById('valor_total').value = valorTotal.toFixed(2);
+    }
+
+    // Função para calcular o valor total na saída
+    function calcularValorTotalSaida() {
+        var quantidade = parseFloat(document.getElementById('quantidade_saida').value) || 0;
+        var valorUnitario = parseFloat(document.getElementById('valor_unitario_saida').value) || 0;
+        var valorTotal = quantidade * valorUnitario;
+        document.getElementById('valor_total_saida').value = valorTotal.toFixed(2);
+    }
+
+    // Função para buscar o valor unitário do produto selecionado no modal de saída
+    function buscarValorUnitario() {
+        var produtoId = document.getElementById('produto_saida').value;
+        if (produtoId) {
+            fetch(`/obter_valor_unitario?produto_id=${produtoId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.valor_unitario) {
+                        document.getElementById('valor_unitario_saida').value = data.valor_unitario.toFixed(2);
+                        calcularValorTotalSaida(); // Atualiza o valor total com o valor unitário obtido
+                    } else {
+                        document.getElementById('valor_unitario_saida').value = '';
+                        document.getElementById('valor_total_saida').value = '';
+                    }
+                })
+                .catch(error => console.error('Erro ao buscar valor unitário:', error));
+        }
+    }
+
+    // Função para filtrar a tabela por filial
+    function filtrarPorFilial() {
+        var filialSelecionada = document.getElementById('filtroFilial').value;
+        var linhas = document.querySelectorAll('#tabelaEstoque tbody tr');
+
+        linhas.forEach(function(linha) {
+            var filial = linha.getAttribute('data-filial');
+            if (filialSelecionada === 'Todas' || filial === filialSelecionada) {
+                linha.style.display = '';
+            } else {
+                linha.style.display = 'none';
+            }
+        });
+    }
+
+    // Inicializa os listeners quando o DOM estiver pronto
+    function configurarListeners() {
+        document.getElementById('quantidade').addEventListener('input', calcularValorTotal);
+        document.getElementById('valor_unitario').addEventListener('input', calcularValorTotal);
+        document.getElementById('quantidade_saida').addEventListener('input', calcularValorTotalSaida);
+        document.getElementById('produto_saida').addEventListener('change', buscarValorUnitario);
+    }
+
+    document.addEventListener('DOMContentLoaded', configurarListeners);
+</script>
+{% endblock %}

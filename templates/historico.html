@@ -1,0 +1,94 @@
+{% extends 'base.html' %}
+
+{% block title %}Histórico do Produto{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <h2>Histórico de Movimentação do Produto - ID: {{ produto_id }}, Produto: {{ nome_produto }}</h2>
+
+    <!-- Filtro de Filiais -->
+    <form method="get" class="mb-4">
+        <div class="form-group">
+            <label for="filial">Selecione a Filial:</label>
+            <select id="filial" name="filial" class="form-control" onchange="this.form.submit()">
+                <option value="Todas" {% if filial_selecionada == 'Todas' %}selected{% endif %}>Todas</option>
+                {% for filial in filiais %}
+                    <option value="{{ filial }}" {% if filial_selecionada == filial %}selected{% endif %}>{{ filial }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </form>
+
+    <!-- Painel Moderno de Quantidade Total -->
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card mb-3 shadow-lg border-primary" style="max-width: 400px;">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Quantidade Total do Produto</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="bg-primary text-white rounded-circle d-flex justify-content-center align-items-center" style="width: 50px; height: 50px;">
+                            <i class="fas fa-box fa-1x"></i>
+                        </div>
+                        <div class="ml-3">
+                            <h2 class="text-primary mb-0" style="margin-left: 20px;">{{ quantidade_total }}</h2>
+                            <span class="badge badge-info">Unidades</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Painel Moderno de Valor Total -->
+        <div class="col-md-6">
+            <div class="card mb-3 shadow-lg border-success" style="max-width: 400px;">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">Valor Total do Produto</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="bg-success text-white rounded-circle d-flex justify-content-center align-items-center" style="width: 50px; height: 50px;">
+                            <i class="fas fa-money-bill-wave fa-1x"></i>
+                        </div>
+                        <div class="ml-3">
+                            <h2 class="text-success mb-0" style="margin-left: 20px;">R$ {{ valor_total | round(2) }}</h2>
+                            <span class="badge badge-success">Reais</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabela de Histórico -->
+    <table class="table table-striped mt-3">
+        <thead>
+            <tr>
+                <th>Data</th>
+                <th>Ação</th>
+                <th>Quantidade</th>
+                <th>Valor Unitário</th>
+                <th>Valor Total</th>
+                <th>Filial</th>
+                <th>Observações</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in historico %}
+            <tr>
+                <td>{{ item['data'] }}</td>
+                <td>{{ item['acao'] }}</td>
+                <td>{{ item['quantidade'] }}</td>
+                <td>{{ item['valor_unitario'] }}</td>
+                <td>{{ item['valor_total'] }}</td>
+                <td>{{ item['filial'] }}</td>
+                <td>{{ item['observacoes'] }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <a href="{{ url_for('estoque') }}" class="btn btn-primary mt-3">Voltar</a>
+</div>
+{% endblock %}

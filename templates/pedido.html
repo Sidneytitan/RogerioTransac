@@ -1,0 +1,172 @@
+{% extends 'base.html' %}
+
+{% block title %}Pedidos{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <h1 class="mb-4">Lista de Pedidos</h1>
+
+    <!-- Painéis de informações -->
+    <div class="row mb-4">
+        {% for filial, quantidade in pedidos_por_filial.items() %}
+            <div class="col-md-3 mb-3">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">{{ filial }}</h5>
+                        <p class="card-text">Quantidade de Pedidos: {{ quantidade }}</p>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+        <div class="col-md-3 mb-3">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Total de Pedidos</h5>
+                    <p class="card-text">Quantidade Total: {{ total_pedidos }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Boleto Enviados</h5>
+                    <p class="card-text">Quantidade: {{ total_boleto_sim }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Boleto Não Enviados</h5>
+                    <p class="card-text">Quantidade: {{ total_boleto_nao }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Formulário de Pesquisa -->
+    <form action="/" method="get" class="mb-4">
+        <div class="input-group">
+            <input type="text" name="search" class="form-control" placeholder="Número do Pedido" value="{{ request.args.get('search', '') }}">
+            <button class="btn btn-primary" type="submit">Buscar</button>
+        </div>
+    </form>
+
+    <!-- Colunas para NF Lançada e Boleto Enviado -->
+    <div class="row">
+        <div class="col-md-6 mb-4">
+            <h3 class="mb-3">Boletos Pendentes</h3>
+            {% for pedido in pedidos if pedido.get('Boleto Enviado') != 'Sim' %}
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <h5 class="card-title">Pedido #{{ pedido.get('ID Pedido', 'N/A') }}</h5>
+                        <h6 class="card-subtitle mb-2 text-muted">{{ pedido.get('Fornecedor', 'Fornecedor não informado') }}</h6>
+                        <p><strong>NF Número:</strong> {{ pedido.get('Número NF', 'N/A') }}</p>
+                        <p><strong>Boleto Enviado:</strong> {{ pedido.get('Boleto Enviado', 'Não') }}</p>
+                        <a href="#" data-bs-toggle="modal" data-bs-target="#pedidoModal{{ loop.index }}" class="btn btn-primary">Visualizar Pedido Completo</a>
+                        <form method="POST" class="mt-2">
+                            <input type="hidden" name="pedido_id" value="{{ pedido['_id'] }}">
+                            <button type="submit" name="boleto_enviado" value="Sim" class="btn btn-warning">Marcar como Enviado</button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Modal para detalhes do pedido -->
+                <div class="modal fade" id="pedidoModal{{ loop.index }}" tabindex="-1" aria-labelledby="pedidoModalLabel{{ loop.index }}" aria-hidden="true">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="pedidoModalLabel{{ loop.index }}">Detalhes do Pedido #{{ pedido.get('ID Pedido', 'N/A') }}</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <ul class="list-unstyled">
+                                    <li><strong>Filial:</strong> {{ pedido.get('Filial', 'N/A') }}</li>
+                                    <li><strong>Fornecedor:</strong> {{ pedido.get('Fornecedor', 'Fornecedor não informado') }}</li>
+                                    <li><strong>Data de Emissão:</strong> {{ pedido.get('Data de Emissão', 'N/A') }}</li>
+                                    <li><strong>Forma de Pagamento:</strong> {{ pedido.get('Forma de Pagamento', 'N/A') }}</li>
+                                    <li><strong>Parcelas:</strong> {{ pedido.get('Parcelas', 'N/A') }}</li>
+                                    <li><strong>Valor Total:</strong> {{ pedido.get('Valor Total', 'N/A') }}</li>
+                                    <li><strong>Vencimento:</strong> {{ pedido.get('Vencimento', 'N/A') }}</li>
+                                    <li><strong>Número NF:</strong> {{ pedido.get('Número NF', 'N/A') }}</li>
+                                    <li><strong>Data de Finalização:</strong> {{ pedido.get('Data de Finalização', 'N/A') }}</li>
+                                    <li><strong>Boleto Enviado:</strong> {{ pedido.get('Boleto Enviado', 'Não') }}</li>
+                                    <li><strong>Atraso de Envio:</strong> {{ pedido.get('Atraso de Envio', 'N/A') }}</li>
+                                    <li><strong>Observação:</strong> {{ pedido.get('Obs:', 'Nenhuma observação') }}</li>
+                                </ul>
+                                <!-- Formulário para editar a observação -->
+                                <form method="POST">
+                                    <input type="hidden" name="pedido_id" value="{{ pedido['_id'] }}">
+                                    <div class="mb-3">
+                                        <label for="observacao{{ loop.index }}" class="form-label">Editar Observação:</label>
+                                        <textarea class="form-control" id="observacao{{ loop.index }}" name="observacao">{{ pedido.get('Obs:', '') }}</textarea>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary">Salvar</button>
+                                </form>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+
+        <div class="col-md-6 mb-4">
+            <h3 class="mb-3">Boletos Enviados para Contas a Pagar</h3>
+            {% for pedido in pedidos if pedido.get('Boleto Enviado') == 'Sim' %}
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <h5 class="card-title">Pedido #{{ pedido.get('ID Pedido', 'N/A') }}</h5>
+                        <h6 class="card-subtitle mb-2 text-muted">{{ pedido.get('Fornecedor', 'Fornecedor não informado') }}</h6>
+                        <p><strong>NF Número:</strong> {{ pedido.get('Número NF', 'N/A') }}</p>
+                        <p><strong>Boleto Enviado:</strong> {{ pedido.get('Boleto Enviado', 'Sim') }}</p>
+                        <a href="#" data-bs-toggle="modal" data-bs-target="#pedidoModal{{ loop.index + 1000 }}" class="btn btn-primary">Visualizar Pedido Completo</a>
+                    </div>
+                </div>
+
+                <!-- Modal para detalhes do pedido -->
+                <div class="modal fade" id="pedidoModal{{ loop.index + 1000 }}" tabindex="-1" aria-labelledby="pedidoModalLabel{{ loop.index + 1000 }}" aria-hidden="true">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="pedidoModalLabel{{ loop.index + 1000 }}">Detalhes do Pedido #{{ pedido.get('ID Pedido', 'N/A') }}</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <ul class="list-unstyled">
+                                    <li><strong>Filial:</strong> {{ pedido.get('Filial', 'N/A') }}</li>
+                                    <li><strong>Fornecedor:</strong> {{ pedido.get('Fornecedor', 'Fornecedor não informado') }}</li>
+                                    <li><strong>Data de Emissão:</strong> {{ pedido.get('Data de Emissão', 'N/A') }}</li>
+                                    <li><strong>Forma de Pagamento:</strong> {{ pedido.get('Forma de Pagamento', 'N/A') }}</li>
+                                    <li><strong>Parcelas:</strong> {{ pedido.get('Parcelas', 'N/A') }}</li>
+                                    <li><strong>Valor Total:</strong> {{ pedido.get('Valor Total', 'N/A') }}</li>
+                                    <li><strong>Vencimento:</strong> {{ pedido.get('Vencimento', 'N/A') }}</li>
+                                    <li><strong>Número NF:</strong> {{ pedido.get('Número NF', 'N/A') }}</li>
+                                    <li><strong>Data de Finalização:</strong> {{ pedido.get('Data de Finalização', 'N/A') }}</li>
+                                    <li><strong>Boleto Enviado:</strong> {{ pedido.get('Boleto Enviado', 'Sim') }}</li>
+                                    <li><strong>Atraso de Envio:</strong> {{ pedido.get('Atraso de Envio', 'N/A') }}</li>
+                                    <li><strong>Observação:</strong> {{ pedido.get('Obs:', 'Nenhuma observação') }}</li>
+                                </ul>
+                                <!-- Formulário para editar a observação -->
+                                <form method="POST">
+                                    <input type="hidden" name="pedido_id" value="{{ pedido['_id'] }}">
+                                    <div class="mb-3">
+                                        <label for="observacao{{ loop.index + 1000 }}" class="form-label">Editar Observação:</label>
+                                        <textarea class="form-control" id="observacao{{ loop.index + 1000 }}" name="observacao">{{ pedido.get('Obs:', '') }}</textarea>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary">Salvar</button>
+                                </form>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}
