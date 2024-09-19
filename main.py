@@ -12,6 +12,7 @@ def connect_to_mongodb():
         db = client["transac"]
         collection_pedido = db["pedido"]
         collection_estoque = db["produtos"]
+        colecao_cadastros = db["cadastros"]
         return collection_pedido, collection_estoque, db
     except Exception as e:
         print(f"Erro ao conectar ao MongoDB: {e}")
@@ -139,11 +140,18 @@ def estoque():
         produto_id = produto['produto_id']
         produto['quantidade'] = quantidade_por_produto.get(produto_id, 0)
 
+    # Obter os recebedores cadastrados no MongoDB (coleção 'cadastros')
+    colecao_cadastros = db['cadastros']
+    recebedores = list(colecao_cadastros.find())  # Lista de recebedores cadastrados
+
     # Lista de todas as filiais para o filtro
     filiais = collection_estoque.distinct('filial')
 
-    return render_template('estoque.html', produtos=produtos, quantidade_total=quantidade_total, valor_total=valor_total, filiais=filiais, filial_selecionada=filial_selecionada)
+    return render_template('estoque.html', produtos=produtos, quantidade_total=quantidade_total,
+                           valor_total=valor_total, filiais=filiais,
+                           filial_selecionada=filial_selecionada, recebedores=recebedores)
 
+# Processamento de estoque (com recebedor)
 @app.route('/processar_estoque', methods=['POST'])
 def processar_estoque():
     _, collection_estoque, db = connect_to_mongodb()
@@ -156,7 +164,8 @@ def processar_estoque():
     valor_unitario = request.form.get('valor_unitario', '0')
     valor_total = request.form.get('valor_total', '0')
     filial = request.form.get('filial', '')
-    quem_lancando = request.form.get('quem_lancando', '')  # Novo campo para "Quem está lançando"
+    recebedor = request.form.get('recebedor', '')  # Capturando o recebedor
+    quem_lancando = request.form.get('quem_lancando', '')
     observacoes = request.form.get('observacoes', '')
 
     # Converte valores para float ou int, garantindo que valores vazios sejam tratados como 0
@@ -176,13 +185,13 @@ def processar_estoque():
         collection_estoque.update_one(
             {'produto_id': produto_id},
             {'$inc': {'quantidade': quantidade}},
-            upsert=False  # Não criar um novo documento, deve falhar se não encontrar o produto
+            upsert=False
         )
     elif acao == 'saida':
         collection_estoque.update_one(
             {'produto_id': produto_id},
             {'$inc': {'quantidade': -quantidade}},
-            upsert=False  # Não criar um novo documento, deve falhar se não encontrar o produto
+            upsert=False
         )
 
     # Registrar a operação no histórico do produto
@@ -193,7 +202,8 @@ def processar_estoque():
         'valor_unitario': valor_unitario,
         'valor_total': valor_total,
         'filial': filial,
-        'quem_lancando': quem_lancando,  # Salvar quem está lançando
+        'recebedor': recebedor,  # Adicionando recebedor no histórico
+        'quem_lancando': quem_lancando,
         'data': data_entrada,
         'observacoes': observacoes,
     }
@@ -201,6 +211,7 @@ def processar_estoque():
 
     return redirect(url_for('estoque'))
 
+# Cadastro de produto
 @app.route('/cadastrar_produto', methods=['POST'])
 def cadastrar_produto():
     _, collection_estoque, _ = connect_to_mongodb()
@@ -223,6 +234,7 @@ def cadastrar_produto():
 
     return redirect(url_for('estoque'))
 
+# Histórico de produto
 @app.route('/historico/<produto_id>', methods=['GET'])
 def historico(produto_id):
     _, collection_estoque, db = connect_to_mongodb()
@@ -233,14 +245,19 @@ def historico(produto_id):
     produto = collection_estoque.find_one({'produto_id': produto_id})
     nome_produto = produto['produto_nome'] if produto else "Nome desconhecido"
 
-    # Obter a filial selecionada do parâmetro da consulta (ou 'Todas' por padrão)
+    # Obter a filial selecionada e o recebedor selecionado do parâmetro da consulta (ou 'Todas' por padrão)
     filial_selecionada = request.args.get('filial', 'Todas')
+    recebedor_selecionado = request.args.get('recebedor', '').strip()  # Filtrar pelo nome do recebedor
 
-    # Buscar o histórico de movimentação do produto
-    if filial_selecionada == 'Todas':
-        historico_cursor = db.historico.find({'produto_id': produto_id})
-    else:
-        historico_cursor = db.historico.find({'produto_id': produto_id, 'filial': filial_selecionada})
+    # Construir a query para buscar no histórico
+    query = {'produto_id': produto_id}
+    if filial_selecionada != 'Todas':
+        query['filial'] = filial_selecionada
+    if recebedor_selecionado:
+        query['recebedor'] = {'$regex': recebedor_selecionado, '$options': 'i'}  # Filtro insensível a maiúsculas/minúsculas
+
+    # Buscar o histórico de movimentação do produto com os filtros aplicados
+    historico_cursor = db.historico.find(query)
     historico = list(historico_cursor)
 
     # Calcular a quantidade total e o valor total considerando entrada e saída
@@ -265,8 +282,11 @@ def historico(produto_id):
                            quantidade_total=quantidade_total,
                            valor_total=valor_total,
                            filiais=filiais,
-                           filial_selecionada=filial_selecionada)
+                           filial_selecionada=filial_selecionada,
+                           recebedor_selecionado=recebedor_selecionado)
 
+
+# Obter valor unitário
 @app.route('/obter_valor_unitario', methods=['GET'])
 def obter_valor_unitario():
     _, _, db = connect_to_mongodb()
@@ -280,6 +300,27 @@ def obter_valor_unitario():
     valor_unitario = ultima_entrada[0]['valor_unitario'] if ultima_entrada else 0
 
     return jsonify({'valor_unitario': valor_unitario})
+
+# Cadastro de Recebedores
+@app.route('/cadastro_recebedor', methods=['GET', 'POST'])
+def cadastro_recebedor():
+    _, _, db = connect_to_mongodb()
+    if db is None:
+        return "Erro de conexão com MongoDB. Verifique o log para mais detalhes."
+
+    colecao_cadastros = db["cadastros"]
+
+    if request.method == 'POST':
+        nome = request.form['nome']
+        filial = request.form['filial']
+
+        # Inserir o recebedor na coleção do MongoDB
+        colecao_cadastros.insert_one({'nome': nome, 'filial': filial})
+        return redirect(url_for('cadastro_recebedor'))
+
+    # Obter todos os recebedores para exibir na tabela
+    recebedores = list(colecao_cadastros.find())
+    return render_template('cadastro_transac.html', recebedores=recebedores)
 
 if __name__ == '__main__':
     app.run(debug=True)

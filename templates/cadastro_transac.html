@@ -1,0 +1,75 @@
+{% extends 'base.html' %}
+
+{% block title %}Controle de Estoque{% endblock %}
+
+{% block content %}
+
+
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cadastro de Recebedores</title>
+    <!-- Adicionando Bootstrap para estilos -->
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-5">
+        <h2>Lista de Recebedores</h2>
+        <button class="btn btn-primary mb-3" data-toggle="modal" data-target="#modalCadastro">Cadastro Novo</button>
+
+        <!-- Tabela de recebedores -->
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th>Nome</th>
+                    <th>Filial</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for recebedor in recebedores %}
+                <tr>
+                    <td>{{ recebedor.nome }}</td>
+                    <td>{{ recebedor.filial }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Modal de Cadastro -->
+    <div class="modal fade" id="modalCadastro" tabindex="-1" role="dialog" aria-labelledby="modalCadastroLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalCadastroLabel">Cadastrar Novo Recebedor</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <!-- Corrigido o action para o endpoint correto -->
+                    <form action="{{ url_for('cadastro_recebedor') }}" method="POST">
+                        <div class="form-group">
+                            <label for="nome">Nome do Recebedor</label>
+                            <input type="text" class="form-control" id="nome" name="nome" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="filial">Filial</label>
+                            <input type="text" class="form-control" id="filial" name="filial" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Cadastrar</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Adicionando scripts do Bootstrap e jQuery -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.3/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</body>
+</html>
+
+{% endblock %}

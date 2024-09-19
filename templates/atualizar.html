@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Atualização</title>
+    <!-- Adicionando Bootstrap para um estilo moderno -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <!-- Adicionando DataTables para funcionalidade dinâmica -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.min.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .container {
+            margin-top: 20px;
+        }
+        .table-container {
+            margin-top: 20px;
+        }
+        table {
+            border-radius: 0.5rem;
+            overflow: hidden;
+        }
+        .table thead th {
+            background-color: #343a40;
+            color: white;
+            font-weight: bold;
+        }
+        .table tbody tr:hover {
+            background-color: #f1f1f1;
+        }
+        .stats {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #ffffff;
+            border-radius: 0.5rem;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="mt-4 mb-4">Tabela de Atualização</h1>
+
+        <!-- Área para mostrar a quantidade total de pedidos -->
+        <div class="stats">
+            <h5>Total de Pedidos: {{ total_orders }}</h5>
+        </div>
+
+        <!-- Botão para enviar dados da planilha para o MongoDB -->
+        <form id="send-data-form" method="POST" action="/send-data">
+            <button type="submit" class="btn btn-primary">Enviar Dados para MongoDB</button>
+        </form>
+
+        <div class="table-container mt-4">
+            <!-- A tabela será inserida aqui -->
+            {{ table|safe }}
+        </div>
+    </div>
+
+    <!-- Adicionando jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- Adicionando DataTables JavaScript -->
+    <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            $('table').DataTable({
+                paging: true,
+                searching: true,
+                ordering: true,
+                info: true
+            });
+
+            $('#send-data-form').on('submit', function(e) {
+                e.preventDefault();
+                var confirmation = confirm('Tem certeza de que deseja enviar os dados para o MongoDB?');
+                if (confirmation) {
+                    $.ajax({
+                        url: $(this).attr('action'),
+                        type: 'POST',
+                        success: function(response) {
+                            alert('Dados enviados com sucesso!');
+                        },
+                        error: function(xhr) {
+                            alert('Erro ao enviar os dados.');
+                        }
+                    });
+                } else {
+                    alert('Operação cancelada.');
+                }
+            });
+        });
+    </script>
+</body>
+</html>
